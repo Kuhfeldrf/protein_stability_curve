@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Interactive teaching tool for protein stability curves: a guided, predict-then-reveal lesson on the Gibbs–Helmholtz equation, ΔH, TΔS, ΔCp, cold denaturation and ΔΔG.">
+<title>Protein Stability Curves</title>
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: guided lab. A sticky lesson stepper on the left drives a shared "bench" on the right (curve + controls, readouts, term breakdown, molecules, populations). Objectives and the ligand-binding bridge sit above; quiz and spreadsheet check below. */
+:root{
+  --bg:#EDF1F3; --panel:#FFFFFF; --ink:#13212C; --muted:#56656F; --line:#D4DCE1; --grid:#E5EBEE;
+  --fold:#1B6BB0; --unfold:#CF4F27; --enth:#7A4DC0; --ent:#12866F; --pin:#8B97A1; --hi:#F6E79B; --hi-ink:#4A3F00;
+  --tint:#E3EEF8;
+  --f-display:"Archivo","Arial Narrow",system-ui,sans-serif;
+  --f-body:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E1418; --panel:#151D23; --ink:#E4EBEF; --muted:#94A3AE; --line:#2A353D; --grid:#1F2930;
+    --fold:#5AA5E6; --unfold:#F07D52; --enth:#B08CF0; --ent:#47C4A7; --pin:#6E7C86; --hi:#4A4318; --hi-ink:#F6E79B;
+    --tint:#16283A;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E1418; --panel:#151D23; --ink:#E4EBEF; --muted:#94A3AE; --line:#2A353D; --grid:#1F2930;
+  --fold:#5AA5E6; --unfold:#F07D52; --enth:#B08CF0; --ent:#47C4A7; --pin:#6E7C86; --hi:#4A4318; --hi-ink:#F6E79B;
+  --tint:#16283A;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;padding-inline:20px;padding-block:0 48px}
+.wrap{max-width:1360px;margin:0 auto}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;line-height:1.12}
+.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.eyebrow{font-family:var(--f-mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+sub{font-size:.72em}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--fold);outline-offset:2px}
+
+/* ---------- Header ---------- */
+.top{padding-block:28px 18px;display:grid;gap:18px}
+.title-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px 32px;align-items:end}
+.top h1{font-size:clamp(30px,4.2vw,50px);font-weight:780;font-stretch:115%;letter-spacing:-.01em}
+.top .intro{margin:8px 0 0;max-width:66ch;color:var(--muted)}
+.eqn-hero{font-family:var(--f-mono);font-size:13.5px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;line-height:1.7;max-width:100%;overflow-x:auto}
+.eqn-hero .t{color:var(--muted);font-size:11px;letter-spacing:.08em;text-transform:uppercase;display:block}
+@media (max-width:860px){.title-row{grid-template-columns:1fr}}
+.prep{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:16px}
+@media (max-width:900px){.prep{grid-template-columns:1fr}}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;min-width:0}
+.box h2{font-size:15px;font-weight:700;margin-bottom:8px}
+.objectives{margin:0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 18px;counter-reset:o}
+@media (max-width:560px){.objectives{grid-template-columns:1fr}}
+.objectives li{counter-increment:o;display:grid;grid-template-columns:22px minmax(0,1fr);gap:6px;font-size:14px}
+.objectives li::before{content:counter(o);font-family:var(--f-mono);font-size:12px;font-weight:600;color:var(--fold);border:1.5px solid var(--fold);border-radius:50%;width:20px;height:20px;display:grid;place-items:center;margin-top:1px}
+.bridge{display:grid;gap:6px}
+.bridge-row{display:grid;grid-template-columns:minmax(0,1fr) 18px minmax(0,1fr);gap:8px;align-items:center;font-size:13px}
+.bridge-row .a,.bridge-row .b{background:var(--bg);border-radius:6px;padding:5px 8px;font-family:var(--f-mono);font-size:12px;line-height:1.35}
+.bridge-row .arr{color:var(--muted);text-align:center}
+.bridge-head{display:grid;grid-template-columns:minmax(0,1fr) 18px minmax(0,1fr);gap:8px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-family:var(--f-mono)}
+
+/* ---------- Lab grid ---------- */
+.lab{display:grid;grid-template-columns:360px minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:1020px){.lab{grid-template-columns:1fr}}
+
+/* Stepper */
+.stepper{position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px);max-height:calc(100vh - 24px);overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);display:flex;flex-direction:column}
+@media (max-width:1020px){.stepper{position:static;max-height:none}}
+.st-head{padding:14px 16px 10px;border-bottom:1px solid var(--line);display:grid;gap:10px}
+.st-head .row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.dots{display:grid;grid-template-columns:repeat(6,1fr);gap:4px}
+.dots button{height:28px;border:1px solid var(--line);background:var(--bg);border-radius:6px;font-family:var(--f-mono);font-size:12px;font-weight:600;color:var(--muted);padding:0}
+.dots button.done{background:var(--tint);color:var(--fold);border-color:transparent}
+.dots button[aria-current="step"]{background:var(--fold);color:var(--panel);border-color:var(--fold)}
+.st-body{padding:16px;display:grid;gap:14px}
+.st-body h2{font-size:21px;font-weight:740;font-stretch:108%}
+.st-sec{display:grid;gap:6px}
+.st-sec .lab-l{font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.st-sec p{margin:0;font-size:14.5px}
+.predict{background:var(--tint);border-radius:8px;padding:12px;display:grid;gap:8px}
+.predict .q{font-weight:600;font-size:14.5px}
+.predict .ans{font-size:14px;border-top:1px solid color-mix(in srgb,var(--fold) 30%,transparent);padding-top:8px}
+.key{border-left:3px solid var(--ink);padding:2px 0 2px 12px;font-weight:600;font-size:14.5px}
+.st-foot{margin-top:auto;padding:12px 16px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:8px}
+.look-list{font-size:12.5px;color:var(--muted)}
+
+.btns{display:flex;flex-wrap:wrap;gap:8px}
+.btn{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:6px 12px;font-size:13px;font-weight:600;display:inline-flex;align-items:baseline;gap:0;line-height:1.35}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+.btn.try{background:var(--fold);color:var(--panel);border-color:var(--fold)}
+.btn[aria-pressed="true"]{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+.btn:disabled{opacity:.4;cursor:default}
+
+/* Bench */
+.bench{display:flex;flex-direction:column;gap:16px;min-width:0}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px;min-width:0;transition:box-shadow .25s}
+.panel.focus{box-shadow:0 0 0 2px var(--fold)}
+.panel-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:8px 16px;margin-bottom:10px}
+.panel-head h2{font-size:18px;font-weight:720;font-stretch:108%;display:flex;align-items:center;gap:8px}
+.panel-head .sub{font-size:13px;color:var(--muted)}
+.look{display:none;font-family:var(--f-mono);font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;background:var(--fold);color:var(--panel);border-radius:999px;padding:2px 8px}
+.panel.focus .look{display:inline-block}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:18px;height:3px;border-radius:2px;display:inline-block}
+.sw.dot{width:8px;height:8px;border-radius:50%}
+.sw.dash{background:repeating-linear-gradient(90deg,var(--pin) 0 5px,transparent 5px 8px)!important;height:2px}
+.cv-wrap{position:relative;width:100%}
+.cv-wrap canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+#mainWrap{height:clamp(300px,40vw,440px);touch-action:pan-y;cursor:ew-resize}
+#sideWrap{height:clamp(200px,20vw,230px);touch-action:pan-y;cursor:ew-resize}
+#molWrap{height:240px}
+.caption{font-size:12.5px;color:var(--muted);margin-top:8px}
+
+/* Controls (inside curve panel) */
+.controls{margin-top:14px;padding-top:14px;border-top:1px solid var(--line);display:grid;gap:12px}
+.ctl-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px 20px}
+.ctl{display:flex;flex-direction:column;gap:2px;min-width:0}
+.ctl-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.ctl-head label{font-weight:600;font-size:14px}
+.ctl-head .unit{font-size:12px;color:var(--muted)}
+.ctl-row{display:grid;grid-template-columns:minmax(0,1fr) 74px;gap:10px;align-items:center}
+.ctl input[type=range]{width:100%;accent-color:var(--fold);height:22px}
+.ctl input[type=number]{width:100%;font-family:var(--f-mono);font-size:13px;padding:5px 6px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);text-align:right}
+.ctl .hint{font-size:12px;color:var(--muted)}
+.ctl.probe label{color:var(--fold)}
+.tools{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center}
+.chk{display:flex;gap:8px;align-items:center;font-size:13.5px}
+.chk input{accent-color:var(--fold);width:16px;height:16px}
+select{font:inherit;font-size:13px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);padding:4px 6px}
+.keys{display:flex;flex-wrap:wrap;gap:6px}
+.kchip{border:1px solid var(--line);background:var(--bg);border-radius:6px;padding:4px 10px;font-size:12.5px;display:inline-flex;gap:6px;align-items:baseline}
+.kchip b{font-family:var(--f-mono);font-weight:600}
+.kchip .v{font-family:var(--f-mono)}
+.kchip:hover:not(:disabled){border-color:var(--muted)}
+.kchip:disabled{cursor:default;opacity:.7}
+
+/* Readouts */
+.reads{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;transition:box-shadow .25s}
+.reads.focus{box-shadow:0 0 0 2px var(--fold)}
+.read{background:var(--panel);padding:10px 12px;min-width:0}
+.read .l{font-size:12px;color:var(--muted)}
+.read .v{font-family:var(--f-mono);font-size:19px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.read .u{font-size:11.5px;color:var(--muted);font-family:var(--f-mono)}
+.read.big .v{font-size:23px}
+.state-pill{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:2px 8px;border-radius:999px;color:var(--panel)}
+
+.two{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:16px}
+@media (max-width:1240px){.two{grid-template-columns:1fr}}
+
+/* Waterfall */
+.wf{display:grid;gap:6px}
+.wf-row{display:grid;grid-template-columns:150px minmax(0,1fr) 72px;gap:10px;align-items:center}
+.wf-lab{font-family:var(--f-mono);font-size:12.5px;line-height:1.25}
+.wf-lab small{display:block;color:var(--muted);font-size:10.5px;letter-spacing:.03em}
+.wf-track{position:relative;height:20px;background:var(--bg);border-radius:4px}
+.wf-bar{position:absolute;top:3px;bottom:3px;border-radius:3px}
+.wf-zero{position:absolute;top:-3px;bottom:-3px;width:1px;background:var(--muted)}
+.wf-val{font-family:var(--f-mono);font-size:13px;text-align:right;font-variant-numeric:tabular-nums}
+.wf-row.total{border-top:1px solid var(--line);padding-top:6px}
+.wf-row.total .wf-lab,.wf-row.total .wf-val{font-weight:600}
+.sums{display:grid;gap:4px;margin-top:12px;font-family:var(--f-mono);font-size:12.5px;background:var(--bg);border-radius:8px;padding:10px 12px;overflow-x:auto}
+.sums div{white-space:nowrap}
+.hl{background:var(--hi);color:var(--hi-ink);border-radius:3px;padding:0 3px}
+@media (max-width:520px){.wf-row{grid-template-columns:112px minmax(0,1fr) 60px;gap:6px}.wf-lab{font-size:11.5px}}
+.molstats{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:13px;margin-top:8px}
+.molstats b{font-family:var(--f-mono);font-weight:600}
+
+/* Below */
+.section{margin-top:36px}
+.section > h2{font-size:clamp(22px,2.6vw,30px);font-weight:760;font-stretch:112%}
+.section > p.lead{color:var(--muted);margin:6px 0 16px;max-width:70ch}
+.quiz{display:grid;gap:10px}
+details{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px 16px}
+summary{cursor:pointer;font-weight:600}
+details p{margin:8px 0 0;max-width:72ch}
+.table-scroll{overflow-x:auto;margin-top:12px}
+table{border-collapse:collapse;width:100%;font-family:var(--f-mono);font-size:12.5px;font-variant-numeric:tabular-nums}
+th,td{padding:6px 10px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--grid)}
+th{font-family:var(--f-body);font-size:12px;font-weight:600;color:var(--muted);background:var(--panel)}
+th .col{display:block;font-family:var(--f-mono);font-size:10.5px;color:var(--muted);font-weight:500}
+td.g{font-weight:600}
+th.y,td.y{background:color-mix(in srgb,var(--hi) 45%,transparent)}
+tr.cur td{background:color-mix(in srgb,var(--fold) 16%,transparent)}
+.table-bar{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;margin-top:10px}
+.notes{margin-top:28px;font-size:13px;color:var(--muted);display:grid;gap:6px;max-width:90ch}
+.notes b{color:var(--ink)}
+.toast{font-size:12.5px;color:var(--ent)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="title-row">
+      <div>
+        <div class="eyebrow">Biophysical chemistry · two-state unfolding N ⇌ U</div>
+        <h1>Protein Stability Curves</h1>
+        <p class="intro">Work through the six steps on the left. Each step moves the model on the right; predict the answer before you reveal it. The sliders stay live, so you can explore at any point. The model starts at the class spreadsheet values.</p>
+      </div>
+      <div class="eqn-hero" aria-label="Gibbs–Helmholtz stability equation">
+        <span class="t">Gibbs–Helmholtz, ΔC<sub>p</sub> constant</span>
+        ΔG(T) = ΔH<sub>m</sub>(1 − T/T<sub>m</sub>)<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ ΔC<sub>p</sub>[(T − T<sub>m</sub>) − T·ln(T/T<sub>m</sub>)]
+      </div>
+    </div>
+    <div class="prep">
+      <section class="box" aria-labelledby="objH">
+        <h2 id="objH">By the end you should be able to</h2>
+        <ol class="objectives">
+          <li><span>Read T<sub>m</sub>, T<sub>s</sub> and T<sub>c</sub> from a stability curve</span></li>
+          <li><span>Convert ΔG into K and the fraction folded</span></li>
+          <li><span>Explain ΔG as ΔH − TΔS and the role of ΔC<sub>p</sub></span></li>
+          <li><span>Predict how a mutation (ΔΔG) shifts the curve and T<sub>m</sub></span></li>
+        </ol>
+      </section>
+      <section class="box bridge" aria-labelledby="brH">
+        <h2 id="brH" style="margin-bottom:2px">Same ideas as the ligand-binding lecture</h2>
+        <div class="bridge-head"><span>Ligand binding</span><span></span><span>Protein unfolding</span></div>
+        <div class="bridge-row"><span class="a">K = [PL]/([P][L])</span><span class="arr">↔</span><span class="b">K = [U]/[N] = e<sup>−ΔG/RT</sup></span></div>
+        <div class="bridge-row"><span class="a">r = K[L]/(1 + K[L])</span><span class="arr">↔</span><span class="b">f<sub>U</sub> = K/(1 + K)</span></div>
+        <div class="bridge-row"><span class="a">K<sub>d</sub> = [L] at half saturation</span><span class="arr">↔</span><span class="b">T<sub>m</sub> = T at half unfolded</span></div>
+        <div class="bridge-row"><span class="a">All-or-none: P + nL ⇌ PL<sub>n</sub></span><span class="arr">↔</span><span class="b">Two-state: N ⇌ U</span></div>
+      </section>
+    </div>
+  </header>
+
+  <div class="lab">
+    <!-- Lesson stepper -->
+    <aside class="stepper" aria-label="Guided lesson">
+      <div class="st-head">
+        <div class="row"><span class="eyebrow" id="stCount">Step 1 of 6</span><button class="btn" id="restart">Restart lesson</button></div>
+        <div class="dots" id="dots" role="tablist" aria-label="Lesson steps"></div>
+      </div>
+      <div class="st-body" id="stBody" aria-live="polite"></div>
+      <div class="st-foot">
+        <button class="btn" id="prev">← Previous</button>
+        <button class="btn primary" id="next">Next step →</button>
+      </div>
+    </aside>
+
+    <!-- Bench -->
+    <section class="bench">
+      <div class="panel" id="pCurve">
+        <div class="panel-head">
+          <h2>Stability curve ΔG(T) <span class="look">Look here</span></h2>
+          <div class="legend">
+            <span><i class="sw" style="background:var(--ink)"></i>ΔG unfolding</span>
+            <span data-comp><i class="sw" style="background:var(--enth)"></i>ΔH(T)</span>
+            <span data-comp><i class="sw" style="background:var(--ent)"></i>TΔS(T)</span>
+            <span data-pin><i class="sw dash"></i>Original protein</span>
+            <span data-sheet><i class="sw dot" style="background:var(--unfold)"></i>Spreadsheet rows</span>
+          </div>
+        </div>
+        <div class="cv-wrap" id="mainWrap"><canvas id="cvMain" role="img" aria-label="Stability curve: free energy of unfolding versus temperature"></canvas></div>
+        <div class="caption">Drag across the chart to move the probe temperature. Blue: ΔG &gt; 0, folded state favored. Orange: ΔG &lt; 0, unfolded state favored.</div>
+
+        <div class="controls">
+          <div class="ctl-grid">
+            <div class="ctl probe">
+              <div class="ctl-head"><label for="inT">Probe temperature T</label><span class="unit">°C</span></div>
+              <div class="ctl-row"><input type="range" id="rT" min="-40" max="130" step="0.1" aria-label="Probe temperature slider"><input type="number" id="inT" min="-40" max="130" step="0.1"></div>
+            </div>
+            <div class="ctl">
+              <div class="ctl-head"><label for="inTm">T<sub>m</sub> = T<sub>ref</sub></label><span class="unit">°C</span></div>
+              <div class="ctl-row"><input type="range" id="rTm" min="20" max="125" step="0.1" aria-label="Melting temperature slider"><input type="number" id="inTm" min="20" max="125" step="0.1"></div>
+            </div>
+            <div class="ctl">
+              <div class="ctl-head"><label for="inH">ΔH<sub>m</sub> = ΔH<sub>ref</sub></label><span class="unit">kJ/mol</span></div>
+              <div class="ctl-row"><input type="range" id="rH" min="20" max="1000" step="1" aria-label="Unfolding enthalpy slider"><input type="number" id="inH" min="20" max="1000" step="1"></div>
+            </div>
+            <div class="ctl">
+              <div class="ctl-head"><label for="inCp">ΔC<sub>p</sub></label><span class="unit">kJ/(mol·K)</span></div>
+              <div class="ctl-row"><input type="range" id="rCp" min="0" max="20" step="0.01" aria-label="Heat capacity change slider"><input type="number" id="inCp" min="0" max="20" step="0.01"></div>
+            </div>
+          </div>
+          <div class="tools">
+            <span class="btns"><button class="btn primary" id="play" aria-pressed="false">▶ Sweep temperature</button>
+            <select id="speed" aria-label="Sweep speed"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option></select></span>
+            <label class="chk"><input type="checkbox" id="cbComp"> ΔH and TΔS curves</label>
+            <label class="chk"><input type="checkbox" id="cbSheet" checked> Spreadsheet rows</label>
+            <span class="btns"><button class="btn" id="pin">Pin curve</button><button class="btn" id="reset">Reset to class values</button></span>
+          </div>
+          <div class="keys" id="keys" aria-label="Key temperatures; click to move the probe"></div>
+        </div>
+      </div>
+
+      <div class="reads" id="reads" aria-live="polite"></div>
+
+      <div class="two">
+        <div class="panel" id="pTerms">
+          <div class="panel-head">
+            <h2>Where ΔG comes from <span class="look">Look here</span></h2>
+            <span class="sub" id="wfT">at 25.0 °C</span>
+          </div>
+          <div class="wf" id="wf"></div>
+          <div class="sums" id="sums"></div>
+          <div class="caption">The four rows are the yellow-highlighted columns of the class spreadsheet. Column B: ΔG = F − H + I − J.</div>
+        </div>
+        <div class="panel" id="pMol">
+          <div class="panel-head">
+            <h2>Molecules at T <span class="look">Look here</span></h2>
+            <span class="state-pill" id="pill">Folded</span>
+          </div>
+          <div class="cv-wrap" id="molWrap"><canvas id="cvMol" role="img" aria-label="Animated population of protein molecules switching between folded and unfolded states"></canvas></div>
+          <div class="molstats" id="molstats"></div>
+        </div>
+      </div>
+
+      <div class="panel" id="pFold">
+        <div class="panel-head">
+          <h2>Fraction folded <span class="look">Look here</span></h2>
+          <span class="sub">f<sub>N</sub> = 1/(1 + K)</span>
+        </div>
+        <div class="cv-wrap" id="sideWrap"><canvas id="cvSide" role="img" aria-label="Fraction folded versus temperature"></canvas></div>
+        <div class="caption" id="sideCap"></div>
+      </div>
+    </section>
+  </div>
+
+  <section class="section">
+    <h2>Check your understanding</h2>
+    <p class="lead">Three questions that pull the steps together. Answer first, then test with the model.</p>
+    <div class="quiz">
+      <details><summary>Which spreadsheet columns add up to ΔH(T), and which to TΔS(T)?</summary><p>ΔH(T) = F + I = ΔH<sub>ref</sub> + ΔC<sub>p</sub>(T − T<sub>ref</sub>). TΔS(T) = H + J = TΔS<sub>ref</sub> + TΔC<sub>p</sub>ln(T/T<sub>ref</sub>). The spreadsheet's ΔG = F − H + I − J is ΔH(T) − TΔS(T).</p></details>
+      <details><summary>Two proteins have the same T<sub>m</sub> and ΔH<sub>m</sub>, but protein B has a larger ΔC<sub>p</sub>. Which is more stable at 25 °C?</summary><p>Protein A. The ΔC<sub>p</sub> term, ΔC<sub>p</sub>[(T − T<sub>m</sub>) − T·ln(T/T<sub>m</sub>)], is never positive and is zero only at T<sub>m</sub>, so a larger ΔC<sub>p</sub> pulls the curve further down on both sides of T<sub>m</sub>. For the class protein, doubling ΔC<sub>p</sub> takes ΔG at 25 °C from about 33 to about −10 kJ/mol. Try it: pin the curve, then raise ΔC<sub>p</sub>.</p></details>
+      <details><summary>How is the two-state unfolding model like all-or-none ligand binding?</summary><p>Both treat the change as one cooperative step with no populated intermediates. A molecule is either N or U, just as P either has no ligand or all n ligands (PL<sub>n</sub>). That cooperativity is what makes the unfolding transition sharp, as all-or-none binding makes the binding curve sigmoid.</p></details>
+    </div>
+  </section>
+
+  <section class="section">
+    <details id="tableBox">
+      <summary>Spreadsheet check: the calculation table for the current inputs</summary>
+      <div class="table-bar">
+        <span style="color:var(--muted);font-size:13px">Same columns as the spreadsheet, recomputed live. The row nearest the probe is highlighted.</span>
+        <span class="btns"><button class="btn" id="copy">Copy as CSV</button><span class="toast" id="toast" aria-live="polite"></span></span>
+      </div>
+      <div class="table-scroll"><table id="tbl"></table></div>
+    </details>
+  </section>
+
+  <div class="notes">
+    <div><b>Model.</b> Two-state equilibrium N ⇌ U. ΔG is the free energy of unfolding (G<sub>U</sub> − G<sub>N</sub>), so positive ΔG means the folded state is favored. ΔC<sub>p</sub> is assumed independent of temperature. K = [U]/[N] = exp(−ΔG/RT), R = 8.314 J/(mol·K).</div>
+    <div><b>Molecule animation.</b> Each molecule flips at random so that, on average, the fraction folded matches equilibrium. The flip speed is for display only; it is not real folding kinetics.</div>
+    <div><b>Units.</b> This page converts °C to K with 273.15; the spreadsheet uses 273. Between 0 and 100 °C this changes ΔG by less than 0.02 kJ/mol. ΔS<sub>ref</sub> = ΔH<sub>ref</sub>/T<sub>ref</sub> has units of kJ/(mol·K).</div>
+  </div>
+</div>
+
+<script>
+(() => {
+"use strict";
+const R = 0.008314, K0 = 273.15;
+const CLASS = {Tm: 88.5, dH: 435, dCp: 7.32};
+const XMIN = -40, XMAX = 130;
+// Cached values from the class spreadsheet (column C in K, column B ΔG in kJ/mol), rows 21–41
+const SHEET = [[273,19.7938],[278,23.7210],[283,26.9898],[288,29.6120],[293,31.5988],[298,32.9609],[303,33.7090],[308,33.8530],[313,33.4029],[318,32.3680],[323,30.7577],[328,28.5808],[333,25.8459],[338,22.5615],[343,18.7356],[348,14.3762],[353,9.4909],[358,4.0872],[363,-1.8277],[368,-8.2468],[373,-15.1632]];
+const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+const S = {p: {...CLASS}, T: 25, comp: false, sheet: true, pinned: null,
+  sweep: false, dir: 1, speed: 1, tween: null, dirty: true, yMain: null};
+
+/* ---------- thermodynamics ---------- */
+function g(Tc, p) {
+  const T = Tc + K0, Tm = p.Tm + K0, L = Math.log(T / Tm);
+  const a = p.dH, b = T * p.dH / Tm, c = p.dCp * (T - Tm), d = T * p.dCp * L;
+  const dG = a - b + c - d, dH = a + c, TdS = b + d;
+  const x = dG / (R * T);
+  const K = Math.exp(Math.max(-700, Math.min(700, -x)));
+  const fU = x > 0 ? Math.exp(-x) / (1 + Math.exp(-x)) : 1 / (1 + Math.exp(x));
+  return {T, a, b, c, d, dG, dH, TdS, dS: TdS / T, K, fU, fN: 1 - fU};
+}
+function bisect(f, lo, hi, n = 80) {
+  let flo = f(lo);
+  for (let i = 0; i < n; i++) { const m = (lo + hi) / 2, fm = f(m); if ((fm > 0) === (flo > 0)) { lo = m; flo = fm; } else hi = m; }
+  return (lo + hi) / 2;
+}
+function keyTemps(p) {
+  const Tm = p.Tm + K0, out = {Tm: p.Tm, Ts: null, Gmax: null, Tc: null};
+  if (p.dCp > 1e-6) {
+    const Ts = Tm * Math.exp(-p.dH / (Tm * p.dCp));
+    out.Ts = Ts - K0; out.Gmax = g(out.Ts, p).dG;
+    const f = T => g(T - K0, p).dG;
+    if (Ts > 2 && f(1) < 0) out.Tc = bisect(f, 1, Ts) - K0;
+  }
+  return out;
+}
+// Build (Tm, ΔHm, ΔCp) from (Ts, ΔGmax, ΔCp); uses ΔH(Ts) = ΔGmax because ΔS(Ts) = 0
+function fromStability(TsC, Gmax, dCp) {
+  const Ts = TsC + K0;
+  const f = T => Gmax + dCp * ((T - Ts) - T * Math.log(T / Ts));
+  const Tm = bisect(f, Ts + 1e-6, Ts + 600);
+  return {Tm: +(Tm - K0).toFixed(2), dH: +(Gmax + dCp * (Tm - Ts)).toFixed(1), dCp};
+}
+// temperatures where fraction folded = 0.9 and 0.1 on the high-T side
+function transition(p) {
+  const f = (t, target) => g(t, p).fN - target;
+  const lo = keyTemps(p).Ts ?? -200;
+  const a = Math.max(lo, p.Tm - 150), b = p.Tm + 150;
+  return [bisect(t => f(t, 0.9), a, p.Tm), bisect(t => f(t, 0.1), p.Tm, b)];
+}
+
+/* ---------- helpers ---------- */
+const $ = id => document.getElementById(id);
+const fmt = (v, d = 1) => (v == null || !isFinite(v)) ? "—" : (Math.abs(v) < 0.5 * 10 ** -d ? (0).toFixed(d) : v.toFixed(d)).replace("-", "−");
+const fmtT = v => v == null ? "none" : fmt(v, 1) + " °C";
+function sci(v) {
+  if (!isFinite(v)) return "—";
+  if (v === 0) return "0";
+  if (v >= 0.01 && v < 1e4) return v.toPrecision(3);
+  const e = Math.floor(Math.log10(v)), m = v / 10 ** e;
+  const sup = String(e).replace(/-/g, "⁻").replace(/\d/g, c => "⁰¹²³⁴⁵⁶⁷⁸⁹"[c]);
+  return m.toFixed(2) + "×10" + sup;
+}
+function oneIn(f) {
+  if (f < 1e-12) return "< 1 in 10¹²";
+  const n = 1 / f;
+  const e = Math.floor(Math.log10(n));
+  const r = n > 1000 ? Math.round(n / 10 ** (e - 1)) * 10 ** (e - 1) : Math.round(n);
+  return "1 in " + r.toLocaleString("en-US");
+}
+const pct = f => (f * 100).toFixed(f > 0.9999 || f < 0.0001 ? 4 : f > 0.999 || f < 0.001 ? 3 : 1) + "%";
+let C = {};
+function readTokens() {
+  const cs = getComputedStyle(document.documentElement);
+  for (const k of ["bg","panel","ink","muted","line","grid","fold","unfold","enth","ent","pin","hi"]) C[k] = cs.getPropertyValue("--" + k).trim();
+  S.dirty = true;
+}
+function rgb(hex) { const h = hex.replace("#", ""); return [0, 2, 4].map(i => parseInt(h.substr(i, 2), 16)); }
+function rgba(hex, a) { const [r, g2, b] = rgb(hex); return `rgba(${r},${g2},${b},${a})`; }
+function mix(h1, h2, t) { const a = rgb(h1), b = rgb(h2); return `rgb(${a.map((v, i) => Math.round(v + (b[i] - v) * t)).join(",")})`; }
+function fit(cv) {
+  const r = cv.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1);
+  const W = Math.max(1, Math.round(r.width * dpr)), H = Math.max(1, Math.round(r.height * dpr));
+  if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+  const ctx = cv.getContext("2d"); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return {ctx, w: r.width, h: r.height};
+}
+function ticks(min, max, n) {
+  const raw = (max - min) / n, mag = 10 ** Math.floor(Math.log10(raw)), r = raw / mag;
+  const step = (r < 1.5 ? 1 : r < 3 ? 2 : r < 7 ? 5 : 10) * mag, out = [];
+  for (let v = Math.ceil(min / step) * step; v <= max + step * 1e-6; v += step) out.push(+v.toFixed(9));
+  return out;
+}
+const MONO = '"JetBrains Mono", ui-monospace, Menlo, monospace';
+const SANS = '"Public Sans", system-ui, sans-serif';
+function rrect(ctx, x, y, w, h, r) { ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h); }
+
+/* ---------- y range (smoothed) ---------- */
+function mainTarget() {
+  let lo = 0, hi = 0, gpos = 5;
+  const sets = [S.p]; if (S.pinned) sets.push(S.pinned);
+  for (const p of sets) for (let t = XMIN; t <= XMAX; t += 1) {
+    const r = g(t, p);
+    if (S.comp) { lo = Math.min(lo, r.dG, r.dH, r.TdS); hi = Math.max(hi, r.dG, r.dH, r.TdS); }
+    else { lo = Math.min(lo, r.dG); hi = Math.max(hi, r.dG); gpos = Math.max(gpos, r.dG); }
+  }
+  if (!S.comp) lo = Math.max(lo, -gpos * 2.4);
+  if (S.sheet && !S.comp) for (const [, v] of SHEET) { lo = Math.min(lo, v); hi = Math.max(hi, v); }
+  const span = hi - lo || 1; return [lo - span * 0.06, hi + span * 0.1];
+}
+function approach(cur, tgt, k) {
+  if (!cur) return [tgt.slice(), true];
+  const n = [cur[0] + (tgt[0] - cur[0]) * k, cur[1] + (tgt[1] - cur[1]) * k];
+  const span = Math.abs(tgt[1] - tgt[0]) || 1;
+  const moving = Math.abs(n[0] - tgt[0]) > span * 0.002 || Math.abs(n[1] - tgt[1]) > span * 0.002;
+  return [moving ? n : tgt.slice(), moving];
+}
+
+/* ---------- main chart ---------- */
+const cvMain = $("cvMain"), cvSide = $("cvSide"), cvMol = $("cvMol");
+let mainGeom = null, sideGeom = null;
+function axes(ctx, w, h, pad, X, Y, yr, yLabel, yFmt, yt) {
+  ctx.font = `11px ${MONO}`; ctx.textBaseline = "middle";
+  ctx.strokeStyle = C.grid; ctx.lineWidth = 1; ctx.fillStyle = C.muted; ctx.textAlign = "right";
+  for (const v of yt) { const y = Math.round(Y(v)) + .5; ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(w - pad.r, y); ctx.stroke(); ctx.fillText(yFmt(v), pad.l - 8, y); }
+  ctx.textAlign = "center";
+  for (const v of ticks(XMIN, XMAX, Math.max(4, Math.round((w - pad.l - pad.r) / 70)))) { const x = Math.round(X(v)) + .5; ctx.beginPath(); ctx.moveTo(x, pad.t); ctx.lineTo(x, h - pad.b); ctx.stroke(); ctx.fillText(fmt(v, 0), x, h - pad.b + 15); }
+  const grad = ctx.createLinearGradient(X(XMIN), 0, X(XMAX), 0);
+  grad.addColorStop(0, C.fold); grad.addColorStop(0.45, rgba(C.fold, 0.25)); grad.addColorStop(0.55, rgba(C.unfold, 0.25)); grad.addColorStop(1, C.unfold);
+  ctx.fillStyle = grad; ctx.fillRect(X(XMIN), h - pad.b + 1, X(XMAX) - X(XMIN), 3);
+  ctx.fillStyle = C.muted; ctx.font = `12px ${SANS}`;
+  ctx.fillText("Temperature (°C)", pad.l + (w - pad.l - pad.r) / 2, h - 7);
+  ctx.save(); ctx.translate(14, pad.t + (h - pad.t - pad.b) / 2); ctx.rotate(-Math.PI / 2); ctx.fillText(yLabel, 0, 0); ctx.restore();
+}
+function probeLine(ctx, px, pad, h) {
+  ctx.strokeStyle = C.ink; ctx.lineWidth = 1; ctx.globalAlpha = 0.6;
+  ctx.beginPath(); ctx.moveTo(Math.round(px) + .5, pad.t); ctx.lineTo(Math.round(px) + .5, h - pad.b); ctx.stroke(); ctx.globalAlpha = 1;
+}
+function dot(ctx, x, y, col) { ctx.fillStyle = C.panel; ctx.beginPath(); ctx.arc(x, y, 6, 0, 7); ctx.fill(); ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x, y, 4.2, 0, 7); ctx.fill(); }
+function label(ctx, lines, colors, px, py, w, pad, h) {
+  ctx.font = `600 11.5px ${MONO}`; ctx.textBaseline = "middle";
+  const bw = Math.max(...lines.map(s => ctx.measureText(s).width)) + 16, bh = lines.length * 16 + 8;
+  let bx = px + 12; if (bx + bw > w - pad.r) bx = px - 12 - bw;
+  const by = Math.min(Math.max(py - bh - 10, pad.t + 2), h - pad.b - bh - 4);
+  ctx.fillStyle = rgba(C.panel, 0.93); ctx.strokeStyle = C.line; ctx.lineWidth = 1;
+  rrect(ctx, bx, by, bw, bh, 6); ctx.fill(); ctx.stroke();
+  ctx.textAlign = "left";
+  lines.forEach((s, i) => { ctx.fillStyle = colors[i]; ctx.fillText(s, bx + 8, by + 12 + i * 16); });
+}
+
+function drawMain(kt) {
+  const {ctx, w, h} = fit(cvMain);
+  const pad = {l: 62, r: 14, t: 30, b: 40};
+  const yr = S.yMain;
+  const X = v => pad.l + (v - XMIN) / (XMAX - XMIN) * (w - pad.l - pad.r);
+  const Y = v => pad.t + (yr[1] - v) / (yr[1] - yr[0]) * (h - pad.t - pad.b);
+  mainGeom = {pad, w, h};
+  ctx.clearRect(0, 0, w, h);
+  axes(ctx, w, h, pad, X, Y, yr, S.comp ? "kJ/mol" : "ΔG of unfolding (kJ/mol)", v => fmt(v, 0), ticks(yr[0], yr[1], Math.max(4, Math.round((h - pad.t - pad.b) / 55))));
+  ctx.font = `10px ${MONO}`; ctx.fillStyle = C.muted; ctx.textAlign = "center";
+  for (let k = 250; k <= 400; k += 50) { const x = X(k - K0); if (x > pad.l + 10 && x < w - pad.r - 10) { ctx.fillText(k + " K", x, pad.t - 20); ctx.fillRect(x, pad.t - 13, 1, 5); } }
+
+  ctx.save(); ctx.beginPath(); ctx.rect(pad.l, pad.t, w - pad.l - pad.r, h - pad.t - pad.b); ctx.clip();
+  const step = (XMAX - XMIN) / Math.max(200, Math.round(w));
+  const curve = (p, key) => { const pts = []; for (let t = XMIN; t <= XMAX + 1e-9; t += step) pts.push([X(t), Y(g(t, p)[key])]); return pts; };
+  const line = (pts, color, lw, dash) => { ctx.beginPath(); pts.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.strokeStyle = color; ctx.lineWidth = lw; ctx.setLineDash(dash || []); ctx.stroke(); ctx.setLineDash([]); };
+  const G = curve(S.p, "dG"), y0 = Y(0);
+  ctx.beginPath(); ctx.moveTo(G[0][0], y0); G.forEach(([x, y]) => ctx.lineTo(x, y)); ctx.lineTo(G[G.length - 1][0], y0); ctx.closePath();
+  ctx.save(); ctx.clip();
+  ctx.fillStyle = rgba(C.fold, S.comp ? 0.08 : 0.14); ctx.fillRect(pad.l, pad.t, w, y0 - pad.t);
+  ctx.fillStyle = rgba(C.unfold, S.comp ? 0.06 : 0.11); ctx.fillRect(pad.l, y0, w, h);
+  ctx.restore();
+  ctx.strokeStyle = C.muted; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(pad.l, Math.round(y0) + .5); ctx.lineTo(w - pad.r, Math.round(y0) + .5); ctx.stroke();
+  if (S.pinned) {
+    line(curve(S.pinned, "dG"), C.pin, 2, [6, 4]);
+    if (S.comp) { line(curve(S.pinned, "dH"), rgba(C.enth, 0.5), 1.5, [6, 4]); line(curve(S.pinned, "TdS"), rgba(C.ent, 0.5), 1.5, [6, 4]); }
+  }
+  if (S.comp) { line(curve(S.p, "dH"), C.enth, 2.2); line(curve(S.p, "TdS"), C.ent, 2.2); }
+  line(G, C.ink, 2.8);
+  if (S.sheet) {
+    ctx.fillStyle = C.unfold; ctx.strokeStyle = C.panel; ctx.lineWidth = 1.5;
+    for (const [k, v] of SHEET) { ctx.beginPath(); ctx.arc(X(k - 273), Y(v), 3.6, 0, 7); ctx.fill(); ctx.stroke(); }
+  }
+  ctx.restore();
+
+  // key temperature markers
+  const marks = [];
+  marks.push({t: kt.Tm, lab: "Tm", col: C.ink});
+  if (kt.Ts != null && kt.Ts > XMIN && kt.Ts < XMAX) marks.push({t: kt.Ts, lab: "Ts", col: C.fold});
+  if (kt.Tc != null && kt.Tc > XMIN) marks.push({t: kt.Tc, lab: "Tc", col: C.fold});
+  marks.sort((a, b) => a.t - b.t);
+  let lastX = [-1e9, -1e9];
+  ctx.font = `600 11px ${MONO}`; ctx.textBaseline = "middle";
+  for (const m of marks) {
+    const x = X(m.t); if (x < pad.l || x > w - pad.r) continue;
+    const tier = (x - lastX[0] > 66) ? 0 : 1; lastX[tier] = x;
+    ctx.strokeStyle = rgba(m.col, 0.55); ctx.setLineDash([3, 3]); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(Math.round(x) + .5, pad.t + 14 + tier * 16); ctx.lineTo(Math.round(x) + .5, h - pad.b); ctx.stroke(); ctx.setLineDash([]);
+    const txt = `${m.lab} ${fmt(m.t, 1)}°`, tw = ctx.measureText(txt).width + 10;
+    const bx = Math.min(Math.max(x - tw / 2, pad.l), w - pad.r - tw), by = pad.t + 2 + tier * 16;
+    ctx.fillStyle = C.panel; ctx.fillRect(bx, by, tw, 14);
+    ctx.fillStyle = m.col; ctx.textAlign = "left"; ctx.fillText(txt, bx + 5, by + 7);
+  }
+  if (kt.Ts != null && kt.Ts > XMIN && kt.Ts < XMAX && !S.comp) { ctx.fillStyle = C.fold; ctx.beginPath(); ctx.arc(X(kt.Ts), Y(kt.Gmax), 3.5, 0, 7); ctx.fill(); }
+
+  const r = g(S.T, S.p), px = X(S.T);
+  probeLine(ctx, px, pad, h);
+  const dots = [[r.dG, C.ink]]; if (S.comp) dots.push([r.dH, C.enth], [r.TdS, C.ent]);
+  for (const [v, col] of dots) { const yy = Y(v); if (yy >= pad.t && yy <= h - pad.b) dot(ctx, px, yy, col); }
+  const lines = [`${fmt(S.T, 1)} °C`, `ΔG ${fmt(r.dG, 1)}`], cols = [C.muted, C.ink];
+  if (S.comp) { lines.push(`ΔH ${fmt(r.dH, 1)}`, `TΔS ${fmt(r.TdS, 1)}`); cols.push(C.enth, C.ent); }
+  label(ctx, lines, cols, px, Math.max(Y(r.dG), pad.t + 60), w, pad, h);
+}
+
+/* ---------- fraction folded chart ---------- */
+function drawSide() {
+  const {ctx, w, h} = fit(cvSide);
+  const pad = {l: 62, r: 14, t: 12, b: 36};
+  const X = v => pad.l + (v - XMIN) / (XMAX - XMIN) * (w - pad.l - pad.r);
+  const Y = v => pad.t + (1 - v) * (h - pad.t - pad.b);
+  sideGeom = {pad, w, h};
+  ctx.clearRect(0, 0, w, h);
+  axes(ctx, w, h, pad, X, Y, [0, 1], "Fraction folded", v => (v * 100) + "%", [0, 0.25, 0.5, 0.75, 1]);
+  ctx.save(); ctx.beginPath(); ctx.rect(pad.l, pad.t, w - pad.l - pad.r, h - pad.t - pad.b); ctx.clip();
+  const step = (XMAX - XMIN) / Math.max(240, Math.round(w * 1.2));
+  const pts = p => { const a = []; for (let t = XMIN; t <= XMAX + 1e-9; t += step) a.push([X(t), Y(g(t, p).fN)]); return a; };
+  const P = pts(S.p);
+  ctx.beginPath(); ctx.moveTo(P[0][0], Y(1)); P.forEach(([x, y]) => ctx.lineTo(x, y)); ctx.lineTo(P[P.length - 1][0], Y(1)); ctx.closePath();
+  ctx.fillStyle = rgba(C.unfold, 0.18); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(P[0][0], Y(0)); P.forEach(([x, y]) => ctx.lineTo(x, y)); ctx.lineTo(P[P.length - 1][0], Y(0)); ctx.closePath();
+  ctx.fillStyle = rgba(C.fold, 0.18); ctx.fill();
+  if (S.pinned) { const Q = pts(S.pinned); ctx.beginPath(); Q.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.strokeStyle = C.pin; ctx.lineWidth = 2; ctx.setLineDash([6, 4]); ctx.stroke(); ctx.setLineDash([]); }
+  ctx.beginPath(); P.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.strokeStyle = C.fold; ctx.lineWidth = 2.5; ctx.stroke();
+  ctx.strokeStyle = C.muted; ctx.setLineDash([3, 3]); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(pad.l, Math.round(Y(.5)) + .5); ctx.lineTo(w - pad.r, Math.round(Y(.5)) + .5); ctx.stroke(); ctx.setLineDash([]);
+  ctx.font = `600 11px ${SANS}`; ctx.textAlign = "left"; ctx.textBaseline = "middle";
+  ctx.fillStyle = C.unfold; ctx.fillText("Unfolded", pad.l + 8, Y(1) + 12);
+  ctx.fillStyle = C.fold; ctx.fillText("Folded", pad.l + 8, Y(0) - 12);
+  ctx.restore();
+  const r = g(S.T, S.p), px = X(S.T);
+  probeLine(ctx, px, pad, h); dot(ctx, px, Y(r.fN), C.fold);
+  label(ctx, [`${pct(r.fN)} folded`], [C.ink], px, Y(r.fN) + 18, w, pad, h);
+}
+
+/* ---------- readouts, keys, waterfall, table ---------- */
+function updateReads() {
+  const r = g(S.T, S.p);
+  const cells = [
+    ["ΔG unfolding", fmt(r.dG, 2), "kJ/mol", true],
+    ["ΔH(T)", fmt(r.dH, 1), "kJ/mol"],
+    ["TΔS(T)", fmt(r.TdS, 1), "kJ/mol"],
+    ["K = [U]/[N]", sci(r.K), "exp(−ΔG/RT)"],
+    ["Folded", pct(r.fN), r.fU < 0.5 ? "unfolded: " + oneIn(r.fU) : "folded: " + oneIn(r.fN)],
+  ];
+  if (S.pinned) { const rp = g(S.T, S.pinned); cells.push(["ΔΔG vs original", (r.dG - rp.dG >= 0 ? "+" : "") + fmt(r.dG - rp.dG, 2), "kJ/mol"]); }
+  $("reads").innerHTML = cells.map(([l, v, u, big]) => `<div class="read${big ? " big" : ""}"><div class="l">${l}</div><div class="v">${v}</div><div class="u">${u}</div></div>`).join("");
+  const pill = $("pill");
+  pill.textContent = r.fN > 0.9 ? "Mostly folded" : r.fN > 0.1 ? "Transition zone" : "Mostly unfolded";
+  pill.style.background = r.fN > 0.9 ? C.fold : r.fN > 0.1 ? C.muted : C.unfold;
+}
+function updateKeys(kt) {
+  const rows = [
+    ["Tm", "ΔG = 0", fmtT(kt.Tm), kt.Tm],
+    ["Ts", "max stability", fmtT(kt.Ts), kt.Ts],
+    ["ΔGmax", "", kt.Gmax == null ? "—" : fmt(kt.Gmax, 1) + " kJ/mol", null],
+    ["Tc", "cold denaturation", kt.Tc == null ? "none" : fmtT(kt.Tc), kt.Tc],
+  ];
+  $("keys").innerHTML = rows.map(([s, d, v, t]) => `<button class="kchip" ${t == null ? "disabled" : `data-go="${t}" title="Move the probe to ${s}"`}><b>${s}</b>${d ? `<span style="color:var(--muted)">${d}</span>` : ""}<span class="v">${v}</span></button>`).join("");
+}
+function updateWaterfall() {
+  const r = g(S.T, S.p);
+  $("wfT").textContent = `at ${fmt(S.T, 1)} °C (${fmt(r.T, 2)} K)`;
+  const steps = [
+    {lab: "ΔH<sub>ref</sub>", tag: "+ column F", v: r.a, c: C.enth},
+    {lab: "− TΔS<sub>ref</sub>", tag: "− column H", v: -r.b, c: C.ent},
+    {lab: "+ ΔC<sub>p</sub>(T−T<sub>ref</sub>)", tag: "+ column I", v: r.c, c: C.enth, light: true},
+    {lab: "− TΔC<sub>p</sub>ln(T/T<sub>ref</sub>)", tag: "− column J", v: -r.d, c: C.ent, light: true},
+  ];
+  let cum = 0; const segs = [];
+  for (const s of steps) { segs.push([cum, cum + s.v]); cum += s.v; }
+  const all = [0, ...segs.flat(), r.dG];
+  let lo = Math.min(...all), hi = Math.max(...all); const sp = (hi - lo) || 1; lo -= sp * 0.03; hi += sp * 0.03;
+  const P = v => ((v - lo) / (hi - lo) * 100), z = P(0);
+  const row = (lab, tag, from, to, val, color, cls, light) => {
+    const l = Math.min(P(from), P(to)), wd = Math.max(0.6, Math.abs(P(to) - P(from)));
+    return `<div class="wf-row ${cls || ""}"><div class="wf-lab">${lab}<small>${tag}</small></div><div class="wf-track"><div class="wf-zero" style="left:${z}%"></div><div class="wf-bar" style="left:${l}%;width:${wd}%;background:${light ? rgba(color, 0.55) : color}"></div></div><div class="wf-val">${fmt(val, 1)}</div></div>`;
+  };
+  $("wf").innerHTML = steps.map((s, i) => row(s.lab, s.tag, segs[i][0], segs[i][1], s.v, s.c, "", s.light)).join("")
+    + row("= ΔG", "column B", 0, r.dG, r.dG, C.ink, "total");
+  $("sums").innerHTML =
+    `<div><span style="color:var(--enth)">ΔH(T)</span> = F + I = ${fmt(r.a, 1)} + (${fmt(r.c, 1)}) = ${fmt(r.dH, 1)}</div>` +
+    `<div><span style="color:var(--ent)">TΔS(T)</span> = H + J = ${fmt(r.b, 1)} + (${fmt(r.d, 1)}) = ${fmt(r.TdS, 1)}</div>` +
+    `<div><span class="hl">ΔG = ΔH − TΔS = ${fmt(r.dH, 1)} − (${fmt(r.TdS, 1)}) = ${fmt(r.dG, 2)} kJ/mol</span></div>`;
+}
+let tableSig = "";
+function updateTable() {
+  const sig = JSON.stringify(S.p) + "|" + Math.round(S.T / 5);
+  if (sig === tableSig) return; tableSig = sig;
+  const near = Math.round(S.T / 5) * 5;
+  let html = `<thead><tr><th>T (°C)<span class="col">&nbsp;</span></th><th>T (K)<span class="col">C</span></th><th class="y">ΔH<sub>ref</sub><span class="col">F</span></th><th class="y">TΔS<sub>ref</sub><span class="col">H</span></th><th class="y">ΔC<sub>p</sub>(T−T<sub>ref</sub>)<span class="col">I</span></th><th class="y">TΔC<sub>p</sub>ln(T/T<sub>ref</sub>)<span class="col">J</span></th><th>ΔG = F−H+I−J<span class="col">B</span></th><th>Folded<span class="col">&nbsp;</span></th></tr></thead><tbody>`;
+  for (let t = 0; t <= 100; t += 5) {
+    const r = g(t, S.p);
+    html += `<tr class="${t === near ? "cur" : ""}"><td>${t}</td><td>${r.T.toFixed(2)}</td><td class="y">${fmt(r.a, 2)}</td><td class="y">${fmt(r.b, 2)}</td><td class="y">${fmt(r.c, 2)}</td><td class="y">${fmt(r.d, 2)}</td><td class="g">${fmt(r.dG, 3)}</td><td>${pct(r.fN)}</td></tr>`;
+  }
+  $("tbl").innerHTML = html + "</tbody>";
+}
+function updateSideCap() {
+  const [t90, t10] = transition(S.p);
+  const Tm = S.p.Tm + K0;
+  $("sideCap").innerHTML = `Near T<sub>m</sub>, ΔG changes by ΔH<sub>m</sub>/T<sub>m</sub> ≈ ${fmt(S.p.dH / Tm, 2)} kJ/mol per degree. Going from 90% to 10% folded needs only ΔG = +RT·ln 9 to −RT·ln 9 (about ±${fmt(R * Tm * Math.log(9), 1)} kJ/mol), which here takes ${fmt(t10 - t90, 1)} °C (${fmt(t90, 1)} to ${fmt(t10, 1)} °C).`;
+}
+
+/* ---------- molecules ---------- */
+const NB = 12;
+const FOLD = [];
+[-0.42, 0, 0.42].forEach((y, row) => { const xs = [-0.51, -0.17, 0.17, 0.51]; (row % 2 ? xs.slice().reverse() : xs).forEach(x => FOLD.push([x, y])); });
+let mols = [];
+const rnd = (a, b) => a + Math.random() * (b - a);
+function makeMol(prev) {
+  const m = {s: 0, m: 0, rot: rnd(0, Math.PI * 2), turn: [], w: [], ph: [], h0: rnd(0, Math.PI * 2)};
+  for (let i = 0; i < NB; i++) { m.turn.push(rnd(-0.9, 0.9)); m.w.push(rnd(0.8, 2.2)); m.ph.push(rnd(0, 6.28)); }
+  if (prev) { m.s = prev.s; m.m = prev.m; } else { m.s = Math.random() < g(S.T, S.p).fU ? 1 : 0; m.m = m.s; }
+  return m;
+}
+let molTime = 0;
+function drawMols(dt) {
+  const {ctx, w, h} = fit(cvMol);
+  const cols = Math.max(5, Math.min(10, Math.floor(w / 58))), rows = 4, n = cols * rows;
+  if (mols.length !== n) { const old = mols; mols = []; for (let i = 0; i < n; i++) mols.push(makeMol(old[i])); }
+  const r = g(S.T, S.p), k = 1.6;
+  const pU = 1 - Math.exp(-k * r.fU * dt), pN = 1 - Math.exp(-k * r.fN * dt);
+  molTime += dt;
+  const heat = Math.min(1, Math.max(0, (S.T - XMIN) / (XMAX - XMIN)));
+  const amp = reduced ? 0 : 0.12 + 0.35 * heat;
+  ctx.clearRect(0, 0, w, h);
+  const cw = w / cols, ch = h / rows, sc = Math.min(cw, ch) * 0.36, br = Math.max(2.2, sc * 0.11);
+  let nF = 0;
+  mols.forEach((m, i) => {
+    if (m.s === 0 && Math.random() < pU) m.s = 1; else if (m.s === 1 && Math.random() < pN) m.s = 0;
+    const rate = reduced ? 1e9 : 2.2;
+    m.m += Math.max(-rate * dt, Math.min(rate * dt, m.s - m.m));
+    if (m.s === 0) nF++;
+    const e = m.m * m.m * (3 - 2 * m.m);
+    const U = []; let x = 0, y = 0, hd = m.h0;
+    for (let j = 0; j < NB; j++) { U.push([x, y]); hd += m.turn[j] + amp * Math.sin(molTime * m.w[j] * 2 + m.ph[j]); x += 0.34 * Math.cos(hd); y += 0.34 * Math.sin(hd); }
+    let cx = 0, cy = 0; U.forEach(p => { cx += p[0]; cy += p[1]; }); cx /= NB; cy /= NB;
+    let rmax = 0; U.forEach(p => { p[0] -= cx; p[1] -= cy; rmax = Math.max(rmax, Math.hypot(p[0], p[1])); });
+    const f = rmax > 1.2 ? 1.2 / rmax : 1; U.forEach(p => { p[0] *= f; p[1] *= f; });
+    const jit = reduced ? 0 : 0.012 + 0.03 * heat;
+    const cosr = Math.cos(m.rot), sinr = Math.sin(m.rot);
+    const ox = (i % cols + 0.5) * cw, oy = (Math.floor(i / cols) + 0.5) * ch;
+    const P = FOLD.map((q, j) => {
+      const fx = q[0] + jit * Math.sin(molTime * 3 + j + i), fy = q[1] + jit * Math.cos(molTime * 2.6 + j * 1.3 + i);
+      const rx = fx * cosr - fy * sinr, ry = fx * sinr + fy * cosr;
+      return [ox + (rx + (U[j][0] - rx) * e) * sc, oy + (ry + (U[j][1] - ry) * e) * sc];
+    });
+    const col = mix(C.fold, C.unfold, e);
+    if (e < 0.95) {
+      ctx.strokeStyle = rgba(C.fold, 0.45 * (1 - e)); ctx.lineWidth = 1; ctx.setLineDash([2, 2]);
+      ctx.beginPath();
+      for (const [a, b] of [[1, 6], [2, 5], [5, 10], [6, 9]]) { ctx.moveTo(P[a][0], P[a][1]); ctx.lineTo(P[b][0], P[b][1]); }
+      ctx.stroke(); ctx.setLineDash([]);
+    }
+    ctx.strokeStyle = col; ctx.lineWidth = Math.max(1.5, br * 0.7); ctx.lineJoin = "round"; ctx.globalAlpha = 0.75;
+    ctx.beginPath(); P.forEach(([px, py], j) => j ? ctx.lineTo(px, py) : ctx.moveTo(px, py)); ctx.stroke(); ctx.globalAlpha = 1;
+    ctx.fillStyle = col;
+    P.forEach(([px, py], j) => { ctx.beginPath(); ctx.arc(px, py, j === 0 ? br * 1.25 : br, 0, 7); ctx.fill(); });
+  });
+  return {nF, n};
+}
+function updateMolStats(st) {
+  const r = g(S.T, S.p);
+  $("molstats").innerHTML =
+    `<span>Folded now <b style="color:var(--fold)">${st.nF}</b> / ${st.n}</span>` +
+    `<span>Unfolded now <b style="color:var(--unfold)">${st.n - st.nF}</b></span>` +
+    `<span>Equilibrium <b>${pct(r.fN)}</b> folded</span>`;
+}
+
+/* ---------- controls ---------- */
+const ctl = [["rTm", "inTm", "Tm"], ["rH", "inH", "dH"], ["rCp", "inCp", "dCp"]];
+function syncInputs() {
+  for (const [r, n, k] of ctl) { $(r).value = S.p[k]; if (document.activeElement !== $(n)) $(n).value = +(+S.p[k]).toFixed(k === "dCp" ? 2 : 1); }
+  $("rT").value = S.T; if (document.activeElement !== $("inT")) $("inT").value = (+S.T).toFixed(1);
+}
+function stopAnim() { S.tween = null; }
+function stopSweep() { S.sweep = false; $("play").setAttribute("aria-pressed", "false"); $("play").textContent = "▶ Sweep temperature"; }
+function startSweep() { stopAnim(); S.sweep = true; $("play").setAttribute("aria-pressed", "true"); $("play").textContent = "❚❚ Pause sweep"; }
+for (const [r, n, k] of ctl) {
+  $(r).addEventListener("input", e => { stopAnim(); S.p[k] = +e.target.value; syncInputs(); S.dirty = true; });
+  $(n).addEventListener("input", e => { const v = parseFloat(e.target.value); if (isFinite(v)) { stopAnim(); S.p[k] = Math.min(+$(r).max, Math.max(+$(r).min, v)); $(r).value = S.p[k]; S.dirty = true; } });
+  $(n).addEventListener("change", syncInputs);
+}
+$("rT").addEventListener("input", e => { stopAnim(); stopSweep(); S.T = +e.target.value; syncInputs(); S.dirty = true; });
+$("inT").addEventListener("input", e => { const v = parseFloat(e.target.value); if (isFinite(v)) { stopAnim(); stopSweep(); S.T = Math.min(XMAX, Math.max(XMIN, v)); $("rT").value = S.T; S.dirty = true; } });
+$("inT").addEventListener("change", syncInputs);
+$("play").addEventListener("click", () => S.sweep ? stopSweep() : startSweep());
+$("speed").addEventListener("change", e => S.speed = +e.target.value);
+function setComp(v) { S.comp = v; $("cbComp").checked = v; legend(); S.dirty = true; }
+$("cbComp").addEventListener("change", e => setComp(e.target.checked));
+$("cbSheet").addEventListener("change", e => { S.sheet = e.target.checked; S.dirty = true; legend(); });
+function setPin(p) { S.pinned = p ? {...p} : null; $("pin").textContent = S.pinned ? "Unpin curve" : "Pin curve"; S.dirty = true; legend(); }
+$("pin").addEventListener("click", () => setPin(S.pinned ? null : S.p));
+$("reset").addEventListener("click", () => { stopSweep(); setPin(null); tweenTo({p: CLASS}); });
+function legend() {
+  document.querySelectorAll("[data-comp]").forEach(el => el.hidden = !S.comp);
+  document.querySelectorAll("[data-pin]").forEach(el => el.hidden = !S.pinned);
+  document.querySelectorAll("[data-sheet]").forEach(el => el.hidden = !S.sheet);
+}
+$("keys").addEventListener("click", e => { const b = e.target.closest("[data-go]"); if (b) { stopSweep(); tweenTo({T: Math.max(XMIN, Math.min(XMAX, +b.dataset.go))}); } });
+function dragOn(cv, geomFn) {
+  let down = false;
+  const set = e => { const gm = geomFn(); if (!gm) return; const rect = cv.getBoundingClientRect(); const t = XMIN + (e.clientX - rect.left - gm.pad.l) / (gm.w - gm.pad.l - gm.pad.r) * (XMAX - XMIN); S.T = Math.round(Math.max(XMIN, Math.min(XMAX, t)) * 10) / 10; stopAnim(); stopSweep(); syncInputs(); S.dirty = true; };
+  cv.addEventListener("pointerdown", e => { down = true; try { cv.setPointerCapture(e.pointerId); } catch (_) {} set(e); });
+  cv.addEventListener("pointermove", e => { if (down) set(e); });
+  const up = () => down = false; cv.addEventListener("pointerup", up); cv.addEventListener("pointercancel", up);
+}
+dragOn(cvMain, () => mainGeom); dragOn(cvSide, () => sideGeom);
+
+/* ---------- tween ---------- */
+function tweenTo(to, dur = 1100) {
+  const target = {p: {...S.p, ...(to.p || {})}, T: to.T != null ? to.T : S.T};
+  if (reduced) { S.p = target.p; S.T = target.T; syncInputs(); S.dirty = true; return; }
+  S.tween = {from: {p: {...S.p}, T: S.T}, target, t0: performance.now(), dur};
+}
+const ease = t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+
+/* ---------- guided lesson ---------- */
+const KC = keyTemps(CLASS);
+const MUT = fromStability(KC.Ts, KC.Gmax - 8, CLASS.dCp);
+const g25 = g(25, CLASS);
+const mutFold = Math.exp(8 / (R * (37 + K0)));
+const STEPS = [
+  {
+    title: "Read the stability curve",
+    focus: ["pCurve", "reads"],
+    idea: `The curve plots ΔG of unfolding (G<sub>U</sub> − G<sub>N</sub>) against temperature. Above the zero line (blue) the folded state is favored; below it (orange) the unfolded state wins. The curve crosses zero at the melting temperature, T<sub>m</sub>. The orange dots are the rows of the class spreadsheet.`,
+    tries: [["Go to Tm", () => { setComp(false); tweenTo({p: CLASS, T: CLASS.Tm}); }], ["Back to 25 °C", () => tweenTo({T: 25})]],
+    q: `At T<sub>m</sub>, what are ΔG, K and the fraction folded?`,
+    a: `ΔG = 0, so K = e<sup>0</sup> = 1 and exactly half the molecules are folded. T<sub>m</sub> plays the role that K<sub>d</sub> plays in ligand binding: the point of half saturation.`,
+    key: `T<sub>m</sub> marks where the protein is half unfolded. It does not tell you how stable the protein is at 25 or 37 °C.`,
+  },
+  {
+    title: "From ΔG to molecules",
+    focus: ["pMol", "pFold"],
+    idea: `ΔG sets the equilibrium constant K = [U]/[N] = e<sup>−ΔG/RT</sup>. The fraction unfolded is K/(1 + K), the same form as r = K[L]/(1 + K[L]) for one binding site. In the two-state model each molecule is either fully folded or fully unfolded, like all-or-none binding.`,
+    tries: [["Sweep temperature", () => { startSweep(); }], ["Go to 25 °C", () => { stopSweep(); tweenTo({T: 25}); }]],
+    q: `For the class protein at 25 °C, ΔG ≈ ${fmt(g25.dG, 0)} kJ/mol. About how many molecules in a million are unfolded at any instant?`,
+    a: `K = exp(−${fmt(g25.dG, 1)} / (0.008314 × 298.15)) ≈ ${sci(g25.K)}, so about ${fmt(g25.fU * 1e6, 0)} in a million. A stable protein still briefly visits the unfolded state.`,
+    key: `Because K depends exponentially on ΔG, every 5.7 kJ/mol (RT·ln 10 at 25 °C) changes K tenfold.`,
+  },
+  {
+    title: "Where ΔG comes from",
+    focus: ["pTerms", "pCurve"],
+    idea: `The spreadsheet builds ΔG from four terms (the yellow columns F, H, I and J). Grouped, they give ΔH(T) = F + I and TΔS(T) = H + J, so ΔG = ΔH − TΔS. Turn on the ΔH and TΔS curves: each changes by hundreds of kJ/mol across the range, almost in step.`,
+    tries: [["Show ΔH and TΔS", () => { setComp(true); tweenTo({p: CLASS, T: 25}); }], ["Go to Tm", () => { setComp(true); tweenTo({T: CLASS.Tm}); }]],
+    q: `At T<sub>m</sub>, how large are ΔH and TΔS compared with ΔG?`,
+    a: `Both equal ΔH<sub>m</sub> = ${CLASS.dH} kJ/mol, and ΔG = 0. Between 0 and 100 °C, ΔH rises by ΔC<sub>p</sub> × 100 K ≈ ${Math.round(CLASS.dCp * 100)} kJ/mol, while ΔG never exceeds about ${fmt(KC.Gmax, 0)} kJ/mol.`,
+    key: `ΔG is a small difference between two large, compensating terms. That compensation is why ΔG is so small compared with its components.`,
+  },
+  {
+    title: "Why the peak is not at Tm",
+    focus: ["pCurve", "reads"],
+    idea: `The slope of the curve is dΔG/dT = −ΔS. ΔG is largest where ΔS(T) = ΔH<sub>m</sub>/T<sub>m</sub> + ΔC<sub>p</sub>·ln(T/T<sub>m</sub>) equals zero. Solving gives the temperature of maximum stability, T<sub>s</sub> = T<sub>m</sub>·exp(−ΔH<sub>m</sub>/(T<sub>m</sub>ΔC<sub>p</sub>)).`,
+    tries: [["Go to Ts", () => { setComp(true); const kt = keyTemps(S.p); if (kt.Ts != null) tweenTo({T: Math.max(XMIN, kt.Ts)}); }]],
+    q: `For the class protein, is the maximum stability nearer 35 °C or 85 °C?`,
+    a: `T<sub>s</sub> ≈ ${fmt(KC.Ts, 1)} °C, where ΔG<sub>max</sub> ≈ ${fmt(KC.Gmax, 1)} kJ/mol. That is more than 50 °C below T<sub>m</sub>. At T<sub>s</sub> the ΔH and TΔS curves are parallel.`,
+    key: `T<sub>m</sub> and the temperature of maximum stability are different temperatures.`,
+  },
+  {
+    title: "ΔCp bends the curve",
+    focus: ["pCurve", "pTerms"],
+    idea: `The curvature is d²ΔG/dT² = −ΔC<sub>p</sub>/T. ΔC<sub>p</sub> of unfolding is positive mainly because unfolding exposes buried nonpolar groups to water. Because the curve bends down on both sides, it crosses zero a second time at low temperature: cold denaturation, T<sub>c</sub>.`,
+    tries: [["Set ΔCp to 0", () => { setComp(false); setPin(CLASS); tweenTo({p: {...CLASS, dCp: 0}, T: 0}); }], ["Restore", () => { setPin(null); tweenTo({p: CLASS}); }], ["Go to Tc", () => { setComp(true); setPin(null); tweenTo({p: CLASS, T: Math.max(XMIN, KC.Tc)}); }]],
+    q: `If ΔC<sub>p</sub> were 0, would the protein cold-denature?`,
+    a: `No. The curve becomes a straight line, ΔH<sub>m</sub>(1 − T/T<sub>m</sub>), with slope −ΔH<sub>m</sub>/T<sub>m</sub>, and keeps rising as temperature falls.`,
+    key: `At low temperature ΔH of unfolding turns negative. At T<sub>c</sub> it exactly offsets −TΔS; below T<sub>c</sub> unfolding is favored. For the class protein T<sub>c</sub> ≈ ${fmt(KC.Tc, 0)} °C, below freezing.`,
+  },
+  {
+    title: "Apply it: a destabilizing mutation",
+    focus: ["pCurve", "reads", "pFold"],
+    idea: `A mutation that removes a buried side-chain contact can cost several kJ/mol. Here the whole curve drops by 8 kJ/mol at every temperature (ΔΔG = −8 kJ/mol, same T<sub>s</sub> and ΔC<sub>p</sub>). The dashed curve is the original protein.`,
+    tries: [["Apply mutation", () => { setComp(false); setPin(CLASS); tweenTo({p: MUT, T: 37}); }], ["Restore", () => { setPin(null); tweenTo({p: CLASS}); }]],
+    q: `Will T<sub>m</sub> go up or down? By what factor will K = [U]/[N] change at 37 °C?`,
+    a: `T<sub>m</sub> falls from ${fmt(CLASS.Tm, 1)} to about ${fmt(MUT.Tm, 1)} °C. K rises by exp(−ΔΔG/RT) = exp(8 / (0.008314 × 310.15)) ≈ ${Math.round(mutFold)}-fold, so about ${Math.round(mutFold)} times more molecules are unfolded at any instant.`,
+    key: `A few kJ/mol of ΔΔG shifts T<sub>m</sub> by several degrees and the unfolded population by an order of magnitude.`,
+  },
+];
+let cur = 0, seen = new Set([0]);
+try { const s = +localStorage.getItem("psc-step"); if (s >= 0 && s < STEPS.length) cur = s; } catch (_) {}
+function renderStep() {
+  const s = STEPS[cur]; seen.add(cur);
+  $("stCount").textContent = `Step ${cur + 1} of ${STEPS.length}`;
+  $("dots").innerHTML = STEPS.map((st, i) => `<button role="tab" aria-label="Step ${i + 1}: ${st.title.replace(/<[^>]+>/g, "")}" ${i === cur ? 'aria-current="step" aria-selected="true"' : 'aria-selected="false"'} class="${seen.has(i) && i !== cur ? "done" : ""}" data-step="${i}">${i + 1}</button>`).join("");
+  const tryLabel = t => t.replace(/Tm/g, "T<sub>m</sub>").replace(/Ts/g, "T<sub>s</sub>").replace(/Tc/g, "T<sub>c</sub>").replace(/ΔCp/g, "ΔC<sub>p</sub>");
+  $("stBody").innerHTML = `
+    <h2>${s.title.replace("Tm", "T<sub>m</sub>").replace("ΔCp", "ΔC<sub>p</sub>")}</h2>
+    <div class="st-sec"><span class="lab-l">The idea</span><p>${s.idea}</p></div>
+    <div class="st-sec"><span class="lab-l">Try it</span><div class="btns">${s.tries.map(([t], i) => `<button class="btn try" data-try="${i}">${tryLabel(t)}</button>`).join("")}</div></div>
+    <div class="predict"><span class="st-sec"><span class="lab-l">Predict first</span></span><div class="q">${s.q}</div><div><button class="btn" id="reveal" aria-expanded="false">Reveal answer</button></div><div class="ans" id="ans" hidden>${s.a}</div></div>
+    <div class="st-sec"><span class="lab-l">Key idea</span><div class="key">${s.key}</div></div>`;
+  $("prev").disabled = cur === 0;
+  $("next").textContent = cur === STEPS.length - 1 ? "Check your understanding ↓" : "Next step →";
+  document.querySelectorAll(".focus").forEach(el => el.classList.remove("focus"));
+  s.focus.forEach(id => $(id).classList.add("focus"));
+  try { localStorage.setItem("psc-step", cur); } catch (_) {}
+}
+function goStep(i) { cur = Math.max(0, Math.min(STEPS.length - 1, i)); stopSweep(); renderStep(); $("stBody").scrollTop = 0; }
+$("stBody").addEventListener("click", e => {
+  const t = e.target.closest("[data-try]");
+  if (t) {
+    if (!t.textContent.includes("Sweep")) stopSweep();
+    STEPS[cur].tries[+t.dataset.try][1]();
+    const first = $(STEPS[cur].focus[0]), r = first.getBoundingClientRect();
+    if (r.top < 0 || r.top > innerHeight * 0.6) first.scrollIntoView({behavior: reduced ? "auto" : "smooth", block: "start"});
+  }
+  if (e.target.id === "reveal") { const a = $("ans"); a.hidden = !a.hidden; e.target.setAttribute("aria-expanded", String(!a.hidden)); e.target.textContent = a.hidden ? "Reveal answer" : "Hide answer"; }
+});
+$("dots").addEventListener("click", e => { const b = e.target.closest("[data-step]"); if (b) goStep(+b.dataset.step); });
+$("prev").addEventListener("click", () => goStep(cur - 1));
+$("next").addEventListener("click", () => {
+  if (cur === STEPS.length - 1) { document.querySelector(".quiz").scrollIntoView({behavior: reduced ? "auto" : "smooth", block: "center"}); return; }
+  goStep(cur + 1);
+});
+$("restart").addEventListener("click", () => { seen = new Set(); setPin(null); setComp(false); tweenTo({p: CLASS, T: 25}); goStep(0); });
+
+/* ---------- copy CSV ---------- */
+$("copy").addEventListener("click", () => {
+  const rows = [["T (C)", "T (K)", "DHref", "TDSref", "DCp(T-Tref)", "TDCp ln(T/Tref)", "DG (kJ/mol)", "Fraction folded"]];
+  for (let t = 0; t <= 100; t += 5) { const r = g(t, S.p); rows.push([t, r.T.toFixed(2), r.a.toFixed(3), r.b.toFixed(3), r.c.toFixed(3), r.d.toFixed(3), r.dG.toFixed(4), r.fN.toPrecision(6)]); }
+  const csv = rows.map(r => r.join(",")).join("\n");
+  const done = m => { $("toast").textContent = m; setTimeout(() => $("toast").textContent = "", 2500); };
+  const fallback = () => {
+    const ta = document.createElement("textarea"); ta.value = csv; document.body.appendChild(ta); ta.select();
+    try { document.execCommand("copy"); done("Copied 21 rows"); } catch (_) { done("Select the table and copy it manually"); }
+    ta.remove();
+  };
+  try { navigator.clipboard.writeText(csv).then(() => done("Copied 21 rows"), fallback); } catch (_) { fallback(); }
+});
+
+/* ---------- loop ---------- */
+readTokens();
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", readTokens);
+new MutationObserver(readTokens).observe(document.documentElement, {attributes: true, attributeFilter: ["data-theme"]});
+new ResizeObserver(() => S.dirty = true).observe(document.querySelector(".bench"));
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => S.dirty = true);
+syncInputs(); legend(); renderStep();
+
+let last = performance.now(), lastSig = "", molStatT = 0;
+function frame(now) {
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  if (S.tween) {
+    const tw = S.tween, k = Math.min(1, (now - tw.t0) / tw.dur), e = ease(k);
+    for (const key of ["Tm", "dH", "dCp"]) S.p[key] = tw.from.p[key] + (tw.target.p[key] - tw.from.p[key]) * e;
+    S.T = tw.from.T + (tw.target.T - tw.from.T) * e;
+    if (k >= 1) S.tween = null;
+    syncInputs(); S.dirty = true;
+  }
+  if (S.sweep) {
+    S.T += S.dir * 14 * S.speed * dt;
+    if (S.T >= XMAX) { S.T = XMAX; S.dir = -1; } if (S.T <= XMIN) { S.T = XMIN; S.dir = 1; }
+    syncInputs(); S.dirty = true;
+  }
+  const [ym, mv] = approach(S.yMain, mainTarget(), reduced ? 1 : 0.2); S.yMain = ym;
+  if (S.dirty || mv) {
+    const kt = keyTemps(S.p);
+    drawMain(kt); drawSide();
+    if (S.dirty) {
+      const sig = [S.p.Tm.toFixed(2), S.p.dH.toFixed(1), S.p.dCp.toFixed(3)].join();
+      if (sig !== lastSig) { updateKeys(kt); updateSideCap(); lastSig = sig; }
+      updateReads(); updateWaterfall(); updateTable();
+    }
+    S.dirty = false;
+  }
+  const st = drawMols(dt);
+  molStatT += dt; if (molStatT > 0.15) { updateMolStats(st); molStatT = 0; }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
